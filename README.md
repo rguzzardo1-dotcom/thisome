@@ -25,7 +25,7 @@ Two scripts that run on your Windows PC:
    - Create a virtualenv and install dependencies.
    - Prompt you for your Azure `CLIENT_ID` / `TENANT_ID` and write `.env`.
    - Run `daily_todo.py` once so you can complete the device-code sign-in.
-   - Register two Windows scheduled tasks (daily 6:00 AM, weekly Mon 8:00 AM).
+   - Register two Windows scheduled tasks (daily 2:00 AM, weekly Mon 8:00 AM).
 
 That's it. You can edit the times later in **Task Scheduler** under
 `\thisome\`.
@@ -83,7 +83,7 @@ Scheduled tasks created under `\thisome\` in Task Scheduler:
 
 | Task              | When           | What it runs                       |
 | ----------------- | -------------- | ---------------------------------- |
-| `Daily To Do`     | Daily 6:00 AM  | `daily_todo.py`                    |
+| `Daily To Do`     | Daily 2:00 AM  | `daily_todo.py`                    |
 | `Weekly Cleanup`  | Mon 8:00 AM    | `desktop_organize.py` (shows Tk)   |
 
 ---

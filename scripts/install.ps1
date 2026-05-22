@@ -15,7 +15,7 @@ Re-run any time; it's idempotent.
 
 [CmdletBinding()]
 param(
-    [string]$DailyTime  = '06:00',
+    [string]$DailyTime  = '02:00',
     [string]$WeeklyTime = '08:00',
     [string]$WeeklyDay  = 'Monday'
 )
@@ -106,10 +106,12 @@ function Register-ThisomeTask {
 
     # Run only when the user is logged on so Tk dialogs can show.
     $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+    $wake = $Trigger -eq 'Daily'
     $settings  = New-ScheduledTaskSettingsSet `
         -StartWhenAvailable `
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
+        -WakeToRun:$wake `
         -MultipleInstances IgnoreNew
 
     Register-ScheduledTask `
@@ -131,3 +133,6 @@ Register-ThisomeTask -Name 'Weekly Cleanup' -Script (Join-Path $RepoRoot 'deskto
 Write-Host ""
 Write-Host "Done. Daily To Do runs at $DailyTime; Weekly Cleanup runs $WeeklyDay at $WeeklyTime." -ForegroundColor Green
 Write-Host "Edit times anytime in Task Scheduler under \thisome\."
+Write-Host ""
+Write-Host "Note: 2 AM tasks require the PC to be on (or set to wake-on-timer in BIOS/UEFI)."
+Write-Host "If it misses a run because the PC was off, StartWhenAvailable will catch it next boot." -ForegroundColor Yellow
