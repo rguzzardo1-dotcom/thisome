@@ -25,7 +25,10 @@ Two scripts that run on your Windows PC:
    - Create a virtualenv and install dependencies.
    - Prompt you for your Azure `CLIENT_ID` / `TENANT_ID` and write `.env`.
    - Run `daily_todo.py` once so you can complete the device-code sign-in.
-   - Register two Windows scheduled tasks (daily 2:00 AM, weekly Mon 8:00 AM).
+   - Prompt for your Windows password so the daily task can run while you're
+     signed out (the password is handed straight to Task Scheduler and not
+     stored anywhere by this project).
+   - Register two Windows scheduled tasks (daily 2:00 AM, weekly Fri 4:00 PM).
 
 That's it. You can edit the times later in **Task Scheduler** under
 `\thisome\`.
@@ -81,10 +84,10 @@ C:\Tools\thisome\
 
 Scheduled tasks created under `\thisome\` in Task Scheduler:
 
-| Task              | When           | What it runs                       |
-| ----------------- | -------------- | ---------------------------------- |
-| `Daily To Do`     | Daily 2:00 AM  | `daily_todo.py`                    |
-| `Weekly Cleanup`  | Mon 8:00 AM    | `desktop_organize.py` (shows Tk)   |
+| Task              | When            | Runs as                       | What it runs                       |
+| ----------------- | --------------- | ----------------------------- | ---------------------------------- |
+| `Daily To Do`     | Daily 2:00 AM   | You (signed in or not)        | `daily_todo.py`                    |
+| `Weekly Cleanup`  | Fri 4:00 PM     | You (only when signed in)     | `desktop_organize.py` (shows Tk)   |
 
 ---
 
@@ -123,6 +126,8 @@ python desktop_organize.py      # cleanup with the confirmation dialog
 - **Device-code prompt appears every day** -- the token cache file is being
   deleted between runs. Check that `.thisome_cache.bin` survives reboots and
   that the scheduled task runs as your user, not SYSTEM.
+- **Daily task fails after a Windows password change** -- Task Scheduler holds
+  the old password. Re-run `.\scripts\install.ps1` to refresh it.
 - **Teams messages empty** -- some tenants block delegated `Chat.Read` for
   unmanaged apps. Ask IT to grant admin consent for the app registration.
 - **Confirmation dialog never appears for weekly cleanup** -- the task must

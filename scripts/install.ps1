@@ -16,8 +16,8 @@ Re-run any time; it's idempotent.
 [CmdletBinding()]
 param(
     [string]$DailyTime  = '02:00',
-    [string]$WeeklyTime = '08:00',
-    [string]$WeeklyDay  = 'Monday'
+    [string]$WeeklyTime = '16:00',
+    [string]$WeeklyDay  = 'Friday'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,11 +78,20 @@ if (-not (Test-Path $cachePath)) {
 }
 
 # --- Scheduled tasks -------------------------------------------------------
+# Daily task runs whether the user is signed in or not -- this needs the
+# Windows password so Task Scheduler can launch the process as you. The
+# weekly cleanup stays Interactive because it must show a Tk dialog.
+Write-Host "==> Registering scheduled tasks" -ForegroundColor Cyan
+Write-Host "The daily task needs your Windows password so it can run while you're signed out." -ForegroundColor Yellow
+$securePwd = Read-Host "Windows password for $($env:USERNAME)" -AsSecureString
+$plainPwd  = [System.Net.NetworkCredential]::new('', $securePwd).Password
+
 function Register-ThisomeTask {
     param(
         [string]$Name,
         [string]$Script,
-        [string]$Trigger # 'Daily' or 'Weekly'
+        [string]$Trigger,         # 'Daily' or 'Weekly'
+        [string]$LogonMode        # 'Password' or 'Interactive'
     )
 
     $taskPath = '\thisome\'
@@ -104,35 +113,51 @@ function Register-ThisomeTask {
         $trig = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $WeeklyDay -At $WeeklyTime
     }
 
-    # Run only when the user is logged on so Tk dialogs can show.
-    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
     $wake = $Trigger -eq 'Daily'
-    $settings  = New-ScheduledTaskSettingsSet `
+    $settings = New-ScheduledTaskSettingsSet `
         -StartWhenAvailable `
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
         -WakeToRun:$wake `
         -MultipleInstances IgnoreNew
 
-    Register-ScheduledTask `
-        -TaskName $Name `
-        -TaskPath $taskPath `
-        -Action $action `
-        -Trigger $trig `
-        -Principal $principal `
-        -Settings $settings `
-        -Description "thisome -- $Name" | Out-Null
+    if ($LogonMode -eq 'Password') {
+        Register-ScheduledTask `
+            -TaskName $Name `
+            -TaskPath $taskPath `
+            -Action $action `
+            -Trigger $trig `
+            -Settings $settings `
+            -User $env:USERNAME `
+            -Password $plainPwd `
+            -RunLevel Limited `
+            -Description "thisome -- $Name" | Out-Null
+    } else {
+        $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+        Register-ScheduledTask `
+            -TaskName $Name `
+            -TaskPath $taskPath `
+            -Action $action `
+            -Trigger $trig `
+            -Principal $principal `
+            -Settings $settings `
+            -Description "thisome -- $Name" | Out-Null
+    }
 
     Write-Host "    registered $fullName"
 }
 
-Write-Host "==> Registering scheduled tasks" -ForegroundColor Cyan
-Register-ThisomeTask -Name 'Daily To Do'    -Script (Join-Path $RepoRoot 'daily_todo.py')       -Trigger 'Daily'
-Register-ThisomeTask -Name 'Weekly Cleanup' -Script (Join-Path $RepoRoot 'desktop_organize.py') -Trigger 'Weekly'
+Register-ThisomeTask -Name 'Daily To Do'    -Script (Join-Path $RepoRoot 'daily_todo.py')       -Trigger 'Daily'  -LogonMode 'Password'
+Register-ThisomeTask -Name 'Weekly Cleanup' -Script (Join-Path $RepoRoot 'desktop_organize.py') -Trigger 'Weekly' -LogonMode 'Interactive'
+
+# Best-effort scrub of the password from memory.
+$plainPwd = $null
+[System.GC]::Collect()
 
 Write-Host ""
-Write-Host "Done. Daily To Do runs at $DailyTime; Weekly Cleanup runs $WeeklyDay at $WeeklyTime." -ForegroundColor Green
+Write-Host "Done. Daily To Do runs at $DailyTime (whether signed in or not)." -ForegroundColor Green
+Write-Host "Weekly Cleanup runs $WeeklyDay at $WeeklyTime (requires you to be signed in)." -ForegroundColor Green
 Write-Host "Edit times anytime in Task Scheduler under \thisome\."
 Write-Host ""
-Write-Host "Note: 2 AM tasks require the PC to be on (or set to wake-on-timer in BIOS/UEFI)."
-Write-Host "If it misses a run because the PC was off, StartWhenAvailable will catch it next boot." -ForegroundColor Yellow
+Write-Host "Note: a fully powered-off PC can't run the task -- StartWhenAvailable will catch it next boot." -ForegroundColor Yellow
+Write-Host "If you change your Windows password, re-run this installer so the daily task can re-authenticate." -ForegroundColor Yellow
