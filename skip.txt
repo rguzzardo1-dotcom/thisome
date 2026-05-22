@@ -1,0 +1,7 @@
+# Names of desktop files / folders to never touch.
+# One name per line, case-insensitive. Lines starting with # are ignored.
+# Use this for any file you've "colored" or otherwise manually flagged.
+#
+# Example:
+#   important quote.pdf
+#   Boss's Notes

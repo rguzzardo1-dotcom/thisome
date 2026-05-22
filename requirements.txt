@@ -1,0 +1,9 @@
+msal>=1.28
+requests>=2.32
+python-dotenv>=1.0
+
+# Optional, used by desktop_organize.py for content peek.
+# Safe to omit any of these -- the organizer falls back to filename rules.
+pypdf>=4.2
+python-docx>=1.1
+openpyxl>=3.1
